@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Pedidos EG 2026</title>
+    
+    <!-- Tailwind CSS (Para el diseño, se carga desde internet) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- html2pdf.js (Para generar el PDF, se carga desde internet) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        /* Animaciones para el modal */
+        @keyframes slide-up {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        @keyframes fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .animate-slide-up { animation: slide-up 0.3s ease-out; }
+        @media (min-width: 640px) {
+            .sm\:animate-fade-in { animation: fade-in 0.2s ease-out; transform: none; }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-100 pb-20 font-sans text-slate-800">
+
+    <!-- HEADER MOVIL -->
+    <div class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-10">
+        <h1 class="text-xl font-bold text-center">Generador de Pedidos</h1>
+    </div>
+
+    <div class="max-w-md mx-auto p-4 space-y-6">
+        
+        <!-- SECCION: DATOS DEL ENCABEZADO -->
+        <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+            <h2 class="text-sm font-bold text-blue-600 uppercase tracking-wider mb-4 border-b pb-2">Datos del Pedido</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Cliente / Razón Social</label>
+                    <input type="text" id="inputCliente" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Ej. Empresa SA de CV">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Vendedor</label>
+                    <input type="text" id="inputVendedor" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Ej. Juan Pérez">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Dirección de Entrega</label>
+                    <input type="text" id="inputDireccion" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Ej. Calle Industrial #123...">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">Fecha</label>
+                        <input type="date" id="inputFecha" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">Orden de Compra</label>
+                        <input type="text" id="inputOC" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Ej. OC-9870">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Tipo de Documento</label>
+                    <select id="inputTipo" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium text-blue-700">
+                        <option value="Venta">Venta</option>
+                        <option value="Desarrollo">Desarrollo (Valor Cero / Muestra)</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCION: LISTA DE PRODUCTOS -->
+        <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h2 class="text-sm font-bold text-blue-600 uppercase tracking-wider">Productos (<span id="itemsCount">0</span>)</h2>
+                <button onclick="abrirModal()" class="flex items-center gap-1 bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg text-sm font-bold active:bg-blue-100 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                    Agregar
+                </button>
+            </div>
+
+            <div id="emptyState" class="text-center py-8 text-slate-400">
+                <p class="text-sm">No hay productos en el pedido.</p>
+                <p class="text-xs mt-1">Toca "Agregar" para comenzar.</p>
+            </div>
+
+            <div id="itemsContainer" class="space-y-3 hidden">
+                <!-- Los items se agregarán aquí dinámicamente -->
+            </div>
+        </section>
+
+        <!-- SECCION: OBSERVACIONES -->
+        <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+            <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3">Observaciones</h2>
+            <textarea id="inputObservaciones" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-500 focus:outline-none resize-none" placeholder="Ej. Entregar por la puerta trasera, incluir certificados..." rows="3"></textarea>
+        </section>
+
+        <!-- BOTON FLOTANTE GENERAR PDF -->
+        <button id="btnGenerarPDF" onclick="generarPDF()" disabled class="w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-lg transition-all bg-slate-300 text-slate-500 cursor-not-allowed">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            <span id="textoBtnPdf">Generar y Descargar PDF</span>
+        </button>
+    </div>
+
+    <!-- MODAL PARA AGREGAR PRODUCTO -->
+    <div id="modalAgregar" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 hidden">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-slide-up sm:animate-fade-in">
+            <div class="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50">
+                <h3 class="font-bold text-slate-700">Agregar Producto</h3>
+                <button onclick="cerrarModal()" class="text-slate-400 active:text-slate-600 p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            
+            <div class="p-5 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Producto</label>
+                    <select id="modalProducto" class="w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <!-- Opciones cargadas por JS -->
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Presentación</label>
+                    <select id="modalPresentacion" class="w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <!-- Opciones cargadas por JS -->
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Cantidad</label>
+                    <input type="number" id="modalCantidad" min="0.1" step="any" class="w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Ej. 10">
+                </div>
+
+                <button onclick="agregarItem()" class="w-full mt-4 bg-blue-600 text-white font-bold py-3 rounded-xl active:bg-blue-700">
+                    Añadir al Pedido
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PLANTILLA OCULTA PARA EL PDF -->
+    <div style="position: absolute; top: 0; left: 0; z-index: -100; opacity: 0; pointer-events: none;">
+        <div id="pdf-template" style="width: 700px; max-width: 700px; padding: 20px; background-color: white; font-family: Arial, sans-serif; color: #000; box-sizing: border-box;">
+            
+            <!-- Encabezado del Documento -->
+            <table style="width: 100%; border-bottom: 2px solid #000; margin-bottom: 20px; padding-bottom: 10px;">
+                <tbody>
+                    <tr>
+                        <td style="width: 60%; vertical-align: bottom;">
+                            <h1 style="margin: 0; font-size: 28px; color: #000; text-transform: uppercase; font-weight: 900; letter-spacing: 1px;">
+                                ORDEN DE PEDIDO
+                            </h1>
+                            <p style="margin: 5px 0 0 0; font-size: 13px; color: #000; font-weight: bold;">FORMATO EG 2026</p>
+                        </td>
+                        <td style="width: 40%; text-align: right; vertical-align: bottom;">
+                            <div style="padding: 10px; display: inline-block; text-align: left; min-width: 180px;">
+                                <p style="margin: 0 0 5px 0; font-size: 13px; color: #000;">
+                                    <strong>Fecha:</strong> <span id="pdfFecha">---</span>
+                                </p>
+                                <p style="margin: 0; font-size: 15px; color: #000; font-weight: bold;">OC: <span id="pdfOC">---</span></p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Datos del Cliente -->
+            <div style="margin-bottom: 30px; padding: 15px 20px; background-color: white; border: 1px solid #000;">
+                <table style="width: 100%; font-size: 14px; line-height: 1.6; color: #000;">
+                    <tbody>
+                        <tr>
+                            <td style="width: 15%; font-weight: bold;">Cliente:</td>
+                            <td style="width: 85%; border-bottom: 1px solid #000;" id="pdfCliente">No especificado</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: bold; padding-top: 8px;">Vendedor:</td>
+                            <td style="padding-top: 8px; border-bottom: 1px solid #000;" id="pdfVendedor">No especificado</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: bold; padding-top: 8px;">Dirección:</td>
+                            <td style="padding-top: 8px; border-bottom: 1px solid #000;" id="pdfDireccion">No especificada</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: bold; padding-top: 8px;">Tipo:</td>
+                            <td style="padding-top: 8px;" id="pdfTipo">Venta</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tabla de Artículos -->
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px; color: #000;">
+                <thead>
+                    <tr style="background-color: white; color: #000;">
+                        <th style="padding: 12px 10px; text-align: center; border: 1px solid #000; width: 10%; font-weight: bold;">CANT.</th>
+                        <th style="padding: 12px 10px; text-align: center; border: 1px solid #000; width: 25%; font-weight: bold;">PRESENTACIÓN</th>
+                        <th style="padding: 12px 10px; text-align: center; border: 1px solid #000; width: 45%; font-weight: bold;">PRODUCTO</th>
+                        <th style="padding: 12px 10px; text-align: center; border: 1px solid #000; width: 20%; font-weight: bold;">TOTAL VOL.</th>
+                    </tr>
+                </thead>
+                <tbody id="pdfTablaCuerpo">
+                    <!-- Filas inyectadas por JS -->
+                </tbody>
+            </table>
+
+            <!-- Observaciones (PDF) -->
+            <div style="margin-top: 15px; padding: 15px; border: 1px solid #000; background-color: white; font-size: 13px; min-height: 60px; color: #000;">
+                <strong style="display: block; margin-bottom: 5px;">Observaciones:</strong>
+                <div style="white-space: pre-wrap;" id="pdfObservaciones"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- LISTAS DESDE EXCEL ---
+        const PRODUCTOS_DESDE_EXCEL = `
+Duo Gold Mix
+Eezy Cal
+Eezy Cal Boro
+Eezy Cal K
+Eezy Cal Super Six
+Eezy Fulvic
+Micro Plus
+Soil Pro
+Sweet'N Eezy
+Eezy Gro 24K
+Eezy Gro 8-24-0
+Eezy Gro 9-18-9
+Eezy One
+EZ-N21
+Eezy Sul
+Eezy Gro Zinc 15%
+Eezy Gro Manganeso 12%
+Eezy Gro Fierro 10%
+Eezy Gro Boro 10%
+Eezy Gro Cobre 15%
+Eezy Gro Magnesio 6%
+Eezy Gro Molibdeno 10%
+Eezy Tabs
+Eezy Shade
+Grand Slam
+Paquete Nutricional Maíz Inicio
+Paquete Nuticional Maíz llenado
+Paquete Nutricional Maíz desarrollo
+Paquete Nutricional Maíz
+Paquete Nutricional Chía
+        `;
+
+        const PRESENTACIONES_DESDE_EXCEL = `
+Bidon 1x20 L
+Caja 12x1 L
+Frasco 1x250ml
+Paquete
+Pzs 1x1 L
+Tambo 200x1 L
+Tote 1040x1 L
+Piezas
+        `;
+
+        const procesarLista = (texto) => texto.split('\n').map(l => l.trim()).filter(l => l !== '');
+        
+        const LISTA_PRODUCTOS = ["Selecciona un producto...", ...procesarLista(PRODUCTOS_DESDE_EXCEL)];
+        const LISTA_PRESENTACIONES = ["Selecciona una presentación...", ...procesarLista(PRESENTACIONES_DESDE_EXCEL)];
+
+        // --- ESTADO ---
+        let itemsPedido = [];
+
+        // --- INICIALIZACIÓN ---
+        window.onload = () => {
+            // Fecha de hoy por defecto
+            document.getElementById('inputFecha').valueAsDate = new Date();
+
+            // Llenar selects del modal
+            const selProd = document.getElementById('modalProducto');
+            LISTA_PRODUCTOS.forEach((p, i) => {
+                selProd.add(new Option(p, p, false, i===0));
+                if(i===0) selProd.options[0].disabled = true;
+            });
+
+            const selPres = document.getElementById('modalPresentacion');
+            LISTA_PRESENTACIONES.forEach((p, i) => {
+                selPres.add(new Option(p, p, false, i===0));
+                if(i===0) selPres.options[0].disabled = true;
+            });
+        };
+
+        // --- LOGICA UI ---
+        const abrirModal = () => {
+            document.getElementById('modalAgregar').classList.remove('hidden');
+            document.getElementById('modalCantidad').value = '';
+            document.getElementById('modalProducto').selectedIndex = 0;
+            document.getElementById('modalPresentacion').selectedIndex = 0;
+        };
+
+        const cerrarModal = () => document.getElementById('modalAgregar').classList.add('hidden');
+
+        const obtenerTotalProducto = (cantidad, presentacion) => {
+            const regex = /(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)\s*([a-zA-Z]+)/i;
+            const match = presentacion.match(regex);
+            if (match) {
+                return `${(cantidad * parseFloat(match[1]) * parseFloat(match[2]))} ${match[3]}`;
+            }
+            return `${cantidad} unid.`; 
+        };
+
+        const agregarItem = () => {
+            const prod = document.getElementById('modalProducto').value;
+            const pres = document.getElementById('modalPresentacion').value;
+            const cant = document.getElementById('modalCantidad').value;
+
+            if(prod === LISTA_PRODUCTOS[0] || pres === LISTA_PRESENTACIONES[0]) {
+                alert("Selecciona producto y presentación"); return;
+            }
+            if(!cant || parseFloat(cant) <= 0) {
+                alert("Ingresa cantidad válida"); return;
+            }
+
+            const newItem = {
+                id: Date.now().toString(),
+                cantidad: parseFloat(cant),
+                producto: prod,
+                presentacion: pres,
+                totalVol: obtenerTotalProducto(parseFloat(cant), pres)
+            };
+
+            itemsPedido.push(newItem);
+            actualizarUI();
+            cerrarModal();
+        };
+
+        const eliminarItem = (id) => {
+            itemsPedido = itemsPedido.filter(i => i.id !== id);
+            actualizarUI();
+        };
+
+        const actualizarUI = () => {
+            const container = document.getElementById('itemsContainer');
+            const empty = document.getElementById('emptyState');
+            const btnPdf = document.getElementById('btnGenerarPDF');
+            
+            document.getElementById('itemsCount').innerText = itemsPedido.length;
+
+            if(itemsPedido.length === 0) {
+                empty.classList.remove('hidden');
+                container.classList.add('hidden');
+                btnPdf.disabled = true;
+                btnPdf.className = "w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-lg transition-all bg-slate-300 text-slate-500 cursor-not-allowed";
+            } else {
+                empty.classList.add('hidden');
+                container.classList.remove('hidden');
+                btnPdf.disabled = false;
+                btnPdf.className = "w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-lg transition-all bg-green-600 text-white active:bg-green-700 active:scale-[0.98]";
+                
+                container.innerHTML = itemsPedido.map((item, idx) => `
+                    <div class="relative p-3 border border-slate-100 bg-slate-50 rounded-lg shadow-sm">
+                        <button onclick="eliminarItem('${item.id}')" class="absolute top-3 right-3 text-red-400 p-1 bg-white rounded-full shadow-sm active:bg-red-50">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                        </button>
+                        <div class="pr-8">
+                            <p class="font-bold text-slate-700 text-sm">${idx + 1}. ${item.producto}</p>
+                            <p class="text-xs text-slate-500 mt-1 flex items-center gap-2">
+                                ${item.cantidad} x ${item.presentacion}
+                                <span class="font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded text-[10px] uppercase">
+                                    Total: ${item.totalVol}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        };
+
+        // --- GENERACION PDF ---
+        const generarPDF = () => {
+            if (!window.html2pdf) {
+                alert("La librería de PDF está cargando. Intenta de nuevo en 2 segundos.");
+                return;
+            }
+
+            const btnPdf = document.getElementById('btnGenerarPDF');
+            const txtPdf = document.getElementById('textoBtnPdf');
+            btnPdf.disabled = true;
+            txtPdf.innerText = "Generando...";
+
+            // Llenar datos de la plantilla oculta
+            const cliente = document.getElementById('inputCliente').value;
+            const fechaStr = document.getElementById('inputFecha').value;
+            const tipoDoc = document.getElementById('inputTipo').value;
+
+            // Formatear Fecha
+            let fechaMostrar = '---';
+            let fechaArchivo = '00-00-0000';
+            if(fechaStr) {
+                const [y, m, d] = fechaStr.split('-');
+                fechaMostrar = `${d}/${m}/${y}`;
+                fechaArchivo = `${d}-${m}-${y}`;
+            }
+
+            document.getElementById('pdfFecha').innerText = fechaMostrar;
+            document.getElementById('pdfOC').innerText = document.getElementById('inputOC').value || '---';
+            document.getElementById('pdfCliente').innerText = cliente || 'No especificado';
+            document.getElementById('pdfVendedor').innerText = document.getElementById('inputVendedor').value || 'No especificado';
+            document.getElementById('pdfDireccion').innerText = document.getElementById('inputDireccion').value || 'No especificada';
+            document.getElementById('pdfTipo').innerText = tipoDoc;
+            document.getElementById('pdfObservaciones').innerText = document.getElementById('inputObservaciones').value || ' ';
+
+            // Construir tabla PDF
+            let filasHTML = itemsPedido.map(item => `
+                <tr style="background-color: white;">
+                    <td style="padding: 12px 10px; text-align: center; border: 1px solid #000; font-weight: bold;">${item.cantidad}</td>
+                    <td style="padding: 12px 10px; text-align: center; border: 1px solid #000;">${item.presentacion}</td>
+                    <td style="padding: 12px 10px; text-align: center; border: 1px solid #000; font-weight: bold;">${item.producto}</td>
+                    <td style="padding: 12px 10px; text-align: center; border: 1px solid #000; font-weight: bold;">${item.totalVol}</td>
+                </tr>
+            `).join('');
+
+            // Rellenar vacías
+            const faltantes = 5 - itemsPedido.length;
+            if(faltantes > 0) {
+                for(let i=0; i<faltantes; i++){
+                    filasHTML += `
+                        <tr>
+                            <td style="padding: 18px 10px; border: 1px solid #000;"></td>
+                            <td style="padding: 18px 10px; border: 1px solid #000;"></td>
+                            <td style="padding: 18px 10px; border: 1px solid #000;"></td>
+                            <td style="padding: 18px 10px; border: 1px solid #000;"></td>
+                        </tr>
+                    `;
+                }
+            }
+            document.getElementById('pdfTablaCuerpo').innerHTML = filasHTML;
+
+            // Generar Documento
+            const nombreCliente = cliente ? cliente.replace(/\s+/g, "_") : 'SinCliente';
+            const fileName = `${tipoDoc}_${nombreCliente}_${fechaArchivo}.pdf`;
+            const element = document.getElementById('pdf-template');
+
+            const opt = {
+                margin:       10,
+                filename:     fileName,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, windowWidth: 760, width: 760, scrollY: 0, scrollX: 0 },
+                jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                btnPdf.disabled = false;
+                txtPdf.innerText = "Generar y Descargar PDF";
+            }).catch(e => {
+                alert("Error al generar PDF");
+                btnPdf.disabled = false;
+                txtPdf.innerText = "Generar y Descargar PDF";
+            });
+        };
+    </script>
+</body>
+</html>
